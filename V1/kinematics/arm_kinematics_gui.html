@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>5-DOF Arm Kinematics Console</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg0:#0f0e17; --bg1:#17151f; --bg2:#1e1b29;
+    --line:#332f45; --line2:#443f5c;
+    --txt:#eee9ff; --txt2:#a79fc9; --txt3:#6f6890;
+    --violet:#8b7cf6; --violet2:#6a5ce6;
+    --mint:#5ce6c8; --coral:#f6836a; --warn:#f6c26a;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg0); color:var(--txt);
+    font-family:'Outfit',sans-serif; padding:28px 22px 60px;
+  }
+  h1{
+    font-size:20px; font-weight:600; margin:0 0 2px; letter-spacing:.2px;
+  }
+  .sub{color:var(--txt3); font-size:12.5px; margin:0 0 22px; font-family:'Space Mono',monospace;}
+  .wrap{display:grid; grid-template-columns: 340px 1fr; gap:18px; max-width:1180px; margin:0 auto;}
+  @media (max-width:840px){ .wrap{grid-template-columns:1fr;} }
+  .panel{
+    background:var(--bg1); border:1px solid var(--line); border-radius:10px; padding:16px 16px 18px;
+  }
+  .panel + .panel{margin-top:14px;}
+  .panel h2{
+    font-size:11px; text-transform:uppercase; letter-spacing:1.2px; color:var(--txt3);
+    margin:0 0 14px; font-weight:600;
+  }
+  .modeRow{display:flex; gap:8px; margin-bottom:16px;}
+  .modeBtn{
+    flex:1; background:var(--bg2); border:1px solid var(--line); color:var(--txt2);
+    padding:9px 0; border-radius:7px; font-family:'Outfit'; font-weight:500; font-size:13px;
+    cursor:pointer; transition:.12s;
+  }
+  .modeBtn.active{background:var(--violet2); border-color:var(--violet); color:#fff;}
+  .row{display:flex; align-items:center; gap:10px; margin-bottom:12px;}
+  .row label{width:78px; font-size:12.5px; color:var(--txt2); flex-shrink:0;}
+  .row input[type=range]{flex:1; accent-color:var(--violet);}
+  .row input[type=number]{
+    width:64px; background:var(--bg2); border:1px solid var(--line); color:var(--txt);
+    border-radius:5px; padding:5px 6px; font-family:'Space Mono'; font-size:12px;
+  }
+  .valTag{
+    font-family:'Space Mono'; font-size:12px; color:var(--mint); width:52px; text-align:right; flex-shrink:0;
+  }
+  details{margin-top:6px;}
+  summary{
+    cursor:pointer; font-size:11.5px; color:var(--txt3); letter-spacing:.4px; margin-bottom:10px;
+    text-transform:uppercase;
+  }
+  .cfgGrid{display:grid; grid-template-columns:1fr 1fr; gap:8px 10px; margin-top:8px;}
+  .cfgGrid div{display:flex; flex-direction:column; gap:3px;}
+  .cfgGrid label{font-size:10.5px; color:var(--txt3); font-family:'Space Mono';}
+  .cfgGrid input{
+    background:var(--bg2); border:1px solid var(--line); color:var(--txt); border-radius:5px;
+    padding:5px 6px; font-family:'Space Mono'; font-size:12px; width:100%;
+  }
+  select{
+    background:var(--bg2); border:1px solid var(--line); color:var(--txt); border-radius:5px;
+    padding:6px 8px; font-family:'Outfit'; font-size:12.5px;
+  }
+  .readout{
+    background:var(--bg2); border:1px solid var(--line); border-radius:8px; padding:12px 14px;
+    font-family:'Space Mono'; font-size:12.5px; line-height:1.9; color:var(--txt);
+  }
+  .readout .k{color:var(--txt3);}
+  .readout .v{color:var(--mint);}
+  .warnBox{
+    margin-top:10px; background:#2e1f18; border:1px solid #6b4a2e; color:var(--warn);
+    border-radius:7px; padding:8px 10px; font-size:12px; font-family:'Space Mono'; display:none;
+  }
+  .cmdBox{
+    margin-top:12px; background:var(--bg0); border:1px solid var(--line); border-radius:7px;
+    padding:10px 12px; font-family:'Space Mono'; font-size:12px; color:var(--txt2);
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+  }
+  .cmdBox code{color:var(--mint); word-break:break-all;}
+  .copyBtn{
+    background:transparent; border:1px solid var(--line2); color:var(--txt2); border-radius:5px;
+    padding:5px 9px; font-size:11px; cursor:pointer; flex-shrink:0; font-family:'Outfit';
+  }
+  .copyBtn:hover{border-color:var(--violet); color:#fff;}
+  canvas{background:var(--bg2); border:1px solid var(--line); border-radius:10px; display:block;}
+  .viewsRow{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .viewLabel{font-size:10.5px; color:var(--txt3); font-family:'Space Mono'; text-align:center; margin-top:6px; letter-spacing:.5px;}
+  .legend{display:flex; gap:14px; font-size:11px; color:var(--txt3); margin-top:10px; font-family:'Space Mono';}
+  .legend span{display:inline-flex; align-items:center; gap:5px;}
+  .dot{width:8px; height:8px; border-radius:50%; display:inline-block;}
+</style>
+</head>
+<body>
+
+<h1>5-DOF arm kinematics console</h1>
+<p class="sub">DH model per Ibrahim &amp; Ali (IJES 2025) — base yaw + planar shoulder/elbow/wrist-pitch chain, decoupled wrist roll</p>
+
+<div class="wrap">
+  <div class="left">
+    <div class="panel">
+      <h2>Mode</h2>
+      <div class="modeRow">
+        <button class="modeBtn active" id="btnFK">Forward (angles → pose)</button>
+        <button class="modeBtn" id="btnIK">Inverse (pose → angles)</button>
+      </div>
+
+      <div id="fkControls">
+        <div class="row"><label>&theta;1 base</label><input type="range" id="t1" min="-150" max="150" step="1" value="0"><span class="valTag" id="t1v">0°</span></div>
+        <div class="row"><label>&theta;2 shoulder</label><input type="range" id="t2" min="-90" max="120" step="1" value="30"><span class="valTag" id="t2v">30°</span></div>
+        <div class="row"><label>&theta;3 elbow</label><input type="range" id="t3" min="-130" max="130" step="1" value="-40"><span class="valTag" id="t3v">-40°</span></div>
+        <div class="row"><label>&theta;4 wrist</label><input type="range" id="t4" min="-120" max="120" step="1" value="-10"><span class="valTag" id="t4v">-10°</span></div>
+        <div class="row"><label>&theta;5 roll</label><input type="range" id="t5" min="-180" max="180" step="1" value="0"><span class="valTag" id="t5v">0°</span></div>
+      </div>
+
+      <div id="ikControls" style="display:none;">
+        <div class="row"><label>Px (mm)</label><input type="number" id="px" value="250"></div>
+        <div class="row"><label>Py (mm)</label><input type="number" id="py" value="0"></div>
+        <div class="row"><label>Pz (mm)</label><input type="number" id="pz" value="150"></div>
+        <div class="row"><label>&psi; (deg)</label><input type="number" id="psi" value="-30"></div>
+        <div class="row"><label>&theta;5 roll</label><input type="range" id="t5ik" min="-180" max="180" step="1" value="0"><span class="valTag" id="t5ikv">0°</span></div>
+        <div class="row"><label>Elbow</label>
+          <select id="elbow">
+            <option value="1">Up</option>
+            <option value="-1">Down</option>
+          </select>
+        </div>
+        <div class="warnBox" id="unreachWarn">Target unreachable with current link lengths — reduce reach or check config below.</div>
+      </div>
+
+      <details>
+        <summary>Link lengths (measure your arm, mm)</summary>
+        <div class="cfgGrid">
+          <div><label>L0 base height</label><input type="number" id="cL0" value="75"></div>
+          <div><label>A shoulder offset z</label><input type="number" id="cA" value="14"></div>
+          <div><label>B shoulder offset r</label><input type="number" id="cB" value="12"></div>
+          <div><label>L1 upper arm</label><input type="number" id="cL1" value="102"></div>
+          <div><label>L2 forearm</label><input type="number" id="cL2" value="130"></div>
+          <div><label>L3+L4 wrist→tip</label><input type="number" id="cL34" value="173"></div>
+        </div>
+      </details>
+    </div>
+
+    <div class="panel">
+      <h2>Solved joint angles</h2>
+      <div class="readout" id="readout">—</div>
+      <div class="cmdBox">
+        <span>serial cmd &nbsp;<code id="cmdStr">J 0 30 -40 -10 0 90</code></span>
+        <button class="copyBtn" id="copyBtn">copy</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="panel">
+      <h2>Arm visualization</h2>
+      <div class="viewsRow">
+        <div>
+          <canvas id="sideView" width="380" height="380"></canvas>
+          <div class="viewLabel">side view — reach (r) vs height (z)</div>
+        </div>
+        <div>
+          <canvas id="topView" width="380" height="380"></canvas>
+          <div class="viewLabel">top view — base rotation</div>
+        </div>
+      </div>
+      <div class="legend">
+        <span><i class="dot" style="background:#8b7cf6"></i>links</span>
+        <span><i class="dot" style="background:#5ce6c8"></i>joints</span>
+        <span><i class="dot" style="background:#f6836a"></i>end effector</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const D2R = Math.PI/180, R2D = 180/Math.PI;
+let mode = 'fk';
+
+function cfg(){
+  return {
+    L0: parseFloat(document.getElementById('cL0').value),
+    A:  parseFloat(document.getElementById('cA').value),
+    B:  parseFloat(document.getElementById('cB').value),
+    L1: parseFloat(document.getElementById('cL1').value),
+    L2: parseFloat(document.getElementById('cL2').value),
+    L34:parseFloat(document.getElementById('cL34').value),
+  };
+}
+
+function fk(t1,t2,t3,t4,c){
+  const t1r=t1*D2R, t2r=t2*D2R, t3r=t3*D2R, t4r=t4*D2R;
+  const sum23 = t2r+t3r, sum234 = t2r+t3r+t4r;
+  const r = c.B + c.L1*Math.cos(t2r) + c.L2*Math.cos(sum23) + c.L34*Math.cos(sum234);
+  const z = c.L0 + c.A + c.L1*Math.sin(t2r) + c.L2*Math.sin(sum23) + c.L34*Math.sin(sum234);
+  const Px = r*Math.cos(t1r), Py = r*Math.sin(t1r);
+  return {Px, Py, Pz:z, psi:(t2+t3+t4), r, joints: fkJoints(t2r,t3r,t4r,c)};
+}
+
+function fkJoints(t2r,t3r,t4r,c){
+  const sum23=t2r+t3r, sum234=t2r+t3r+t4r;
+  const p0 = {r:c.B, z:c.L0+c.A};
+  const p1 = {r:p0.r+c.L1*Math.cos(t2r), z:p0.z+c.L1*Math.sin(t2r)};
+  const p2 = {r:p1.r+c.L2*Math.cos(sum23), z:p1.z+c.L2*Math.sin(sum23)};
+  const p3 = {r:p2.r+c.L34*Math.cos(sum234), z:p2.z+c.L34*Math.sin(sum234)};
+  return [{r:0,z:c.L0}, p0, p1, p2, p3];
+}
+
+function ik(Px,Py,Pz,psi,elbowSign,c){
+  const t1 = Math.atan2(Py,Px)*R2D;
+  const rr = Math.hypot(Px,Py) - c.B;
+  const zz = Pz - c.L0 - c.A;
+  const psir = psi*D2R;
+  const Wr = rr - c.L34*Math.cos(psir);
+  const Wz = zz - c.L34*Math.sin(psir);
+  const L1=c.L1, L2=c.L2;
+  let D = (Wr*Wr + Wz*Wz - L1*L1 - L2*L2) / (2*L1*L2);
+  const reachable = D>=-1 && D<=1;
+  D = Math.max(-1, Math.min(1, D));
+  const t3r = Math.atan2(elbowSign*Math.sqrt(1-D*D), D);
+  const t2r = Math.atan2(Wz,Wr) - Math.atan2(L2*Math.sin(t3r), L1+L2*Math.cos(t3r));
+  const t2 = t2r*R2D, t3 = t3r*R2D;
+  const t4 = psi - t2 - t3;
+  return {t1,t2,t3,t4,reachable, joints: fkJoints(t2r,t3r,t4*D2R,c)};
+}
+
+function fmt(n){ return (Math.round(n*100)/100).toFixed(2); }
+
+function drawSide(joints, topR, topT1){
+  const cv = document.getElementById('sideView');
+  const ctx = cv.getContext('2d');
+  const W=cv.width, H=cv.height;
+  ctx.clearRect(0,0,W,H);
+  const scale = 0.45;
+  const ox = 40, oz = H-40;
+  ctx.strokeStyle = '#332f45'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(0,oz); ctx.lineTo(W,oz); ctx.moveTo(ox,0); ctx.lineTo(ox,H); ctx.stroke();
+  ctx.strokeStyle = '#8b7cf6'; ctx.lineWidth=4; ctx.lineCap='round';
+  ctx.beginPath();
+  joints.forEach((p,i)=>{
+    const x = ox + p.r*scale, y = oz - p.z*scale;
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  joints.forEach((p,i)=>{
+    const x = ox + p.r*scale, y = oz - p.z*scale;
+    ctx.fillStyle = (i===joints.length-1) ? '#f6836a' : '#5ce6c8';
+    ctx.beginPath(); ctx.arc(x,y, i===joints.length-1?6:5, 0, 7); ctx.fill();
+  });
+}
+
+function drawTop(r, t1deg){
+  const cv = document.getElementById('topView');
+  const ctx = cv.getContext('2d');
+  const W=cv.width, H=cv.height;
+  ctx.clearRect(0,0,W,H);
+  const cx=W/2, cy=H/2, scale=0.45;
+  ctx.strokeStyle = '#332f45'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(0,cy); ctx.lineTo(W,cy); ctx.moveTo(cx,0); ctx.lineTo(cx,H); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx,cy, Math.abs(r)*scale, 0, Math.PI*2);
+  ctx.strokeStyle = '#443f5c'; ctx.setLineDash([3,4]); ctx.stroke(); ctx.setLineDash([]);
+  const t1r = t1deg*D2R;
+  const ex = cx + r*scale*Math.cos(t1r), ey = cy - r*scale*Math.sin(t1r);
+  ctx.strokeStyle = '#8b7cf6'; ctx.lineWidth=4; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(ex,ey); ctx.stroke();
+  ctx.fillStyle = '#5ce6c8'; ctx.beginPath(); ctx.arc(cx,cy,5,0,7); ctx.fill();
+  ctx.fillStyle = '#f6836a'; ctx.beginPath(); ctx.arc(ex,ey,6,0,7); ctx.fill();
+}
+
+function render(){
+  const c = cfg();
+  let t1,t2,t3,t4,t5,pose,joints,ikRes;
+  if(mode==='fk'){
+    t1=+document.getElementById('t1').value;
+    t2=+document.getElementById('t2').value;
+    t3=+document.getElementById('t3').value;
+    t4=+document.getElementById('t4').value;
+    t5=+document.getElementById('t5').value;
+    pose = fk(t1,t2,t3,t4,c);
+    joints = pose.joints;
+    document.getElementById('unreachWarn').style.display='none';
+  } else {
+    const Px=+document.getElementById('px').value;
+    const Py=+document.getElementById('py').value;
+    const Pz=+document.getElementById('pz').value;
+    const psi=+document.getElementById('psi').value;
+    const es=+document.getElementById('elbow').value;
+    t5=+document.getElementById('t5ik').value;
+    ikRes = ik(Px,Py,Pz,psi,es,c);
+    t1=ikRes.t1; t2=ikRes.t2; t3=ikRes.t3; t4=ikRes.t4;
+    joints = ikRes.joints;
+    pose = fk(t1,t2,t3,t4,c);
+    document.getElementById('unreachWarn').style.display = ikRes.reachable ? 'none' : 'block';
+  }
+
+  drawSide(joints, pose.r, t1);
+  drawTop(pose.r, t1);
+
+  document.getElementById('readout').innerHTML =
+    `<span class="k">theta1</span> <span class="v">${fmt(t1)}</span>°&nbsp;&nbsp;`+
+    `<span class="k">theta2</span> <span class="v">${fmt(t2)}</span>°<br>`+
+    `<span class="k">theta3</span> <span class="v">${fmt(t3)}</span>°&nbsp;&nbsp;`+
+    `<span class="k">theta4</span> <span class="v">${fmt(t4)}</span>°<br>`+
+    `<span class="k">theta5</span> <span class="v">${fmt(t5)}</span>° (roll, free)<br>`+
+    `<span class="k">Px</span> <span class="v">${fmt(pose.Px)}</span>&nbsp;&nbsp;`+
+    `<span class="k">Py</span> <span class="v">${fmt(pose.Py)}</span>&nbsp;&nbsp;`+
+    `<span class="k">Pz</span> <span class="v">${fmt(pose.Pz)}</span>&nbsp;mm<br>`+
+    `<span class="k">psi</span> <span class="v">${fmt(pose.psi)}</span>° (wrist angle vs horizon)`;
+
+  const cmd = `J ${fmt(t1)} ${fmt(t2)} ${fmt(t3)} ${fmt(t4)} ${fmt(t5)} 90`;
+  document.getElementById('cmdStr').textContent = cmd;
+}
+
+document.querySelectorAll('#fkControls input[type=range]').forEach(inp=>{
+  inp.addEventListener('input', ()=>{
+    document.getElementById(inp.id+'v').textContent = inp.value+'°';
+    render();
+  });
+});
+document.getElementById('t5ik').addEventListener('input', (e)=>{
+  document.getElementById('t5ikv').textContent = e.target.value+'°';
+  render();
+});
+['px','py','pz','psi','elbow'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', render);
+  document.getElementById(id).addEventListener('change', render);
+});
+document.querySelectorAll('.cfgGrid input').forEach(inp=> inp.addEventListener('input', render));
+
+document.getElementById('btnFK').addEventListener('click', ()=>{
+  mode='fk';
+  document.getElementById('btnFK').classList.add('active');
+  document.getElementById('btnIK').classList.remove('active');
+  document.getElementById('fkControls').style.display='block';
+  document.getElementById('ikControls').style.display='none';
+  render();
+});
+document.getElementById('btnIK').addEventListener('click', ()=>{
+  mode='ik';
+  document.getElementById('btnIK').classList.add('active');
+  document.getElementById('btnFK').classList.remove('active');
+  document.getElementById('fkControls').style.display='none';
+  document.getElementById('ikControls').style.display='block';
+  render();
+});
+document.getElementById('copyBtn').addEventListener('click', ()=>{
+  navigator.clipboard.writeText(document.getElementById('cmdStr').textContent);
+  const b=document.getElementById('copyBtn'); const old=b.textContent;
+  b.textContent='copied'; setTimeout(()=>b.textContent=old, 1000);
+});
+
+render();
+</script>
+</body>
+</html>
