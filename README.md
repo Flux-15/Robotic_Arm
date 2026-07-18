@@ -45,15 +45,6 @@ This project implements a complete control system for a **ROT3U 5-DOF robotic ar
 - **Computer Vision:** AprilTag-based pick-and-place system with homography-based coordinate transformation
 - **Dual-Arm Support:** Drive two independent arms from a single ESP32 + PCA9685
 
-### Reference Paper
-
-The kinematic model is based on the DH parameters from:
-> Ibrahim & Ali, *"Inverse Kinematic Analysis For A 5 DOF Robotic Arm Using Deep Neural Network,"* IJES vol 11, no 18s, 2025.
-
-**Note:** This implementation uses a **closed-form geometric IK solution** (not the DNN from the paper) for real-time control on microcontrollers.
-
----
-
 ## Version History
 
 ### V1 — Foundation
@@ -431,5 +422,3 @@ Topology options:
 | AprilTag not detected | Ensure proper lighting, marker size, and dictionary (`DICT_APRILTAG_36h11`) |
 
 ---
-
-*Project developed during internship — 5-DOF Robotic Arm FK/IK Control System with Web Console and Computer Vision*
