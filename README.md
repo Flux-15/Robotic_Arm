@@ -2,11 +2,14 @@
 
 > **ESP32 + PCA9685-based 5-DOF robotic arm with forward/inverse kinematics, web console, computer vision pick-and-place, and dual-arm support**
 
+> **Start here:** [`Final/`](Final/) is the main and recommended folder. It contains the production firmware and browser control console. Read [`Final/README.md`](Final/README.md) for the complete build, wiring, and operating instructions.
+
 ---
 
 ## Table of Contents
 
 - [Overview](#overview)
+- [Media and Wiring Quick Reference](#media-and-wiring-quick-reference)
 - [Version History](#version-history)
 - [System Architecture](#system-architecture)
 - [Hardware Requirements](#hardware-requirements)
@@ -44,6 +47,29 @@ This project implements a complete control system for a **ROT3U 5-DOF robotic ar
 - **Web Console:** Premium browser-based control interface with Web Serial API (no Python needed)
 - **Computer Vision:** AprilTag-based pick-and-place system with homography-based coordinate transformation
 - **Dual-Arm Support:** Drive two independent arms from a single ESP32 + PCA9685
+
+## Media and Wiring Quick Reference
+
+The following pictures are included in the repository and are also used in the detailed [`Final/README.md`](Final/README.md) guide.
+
+![Robotic arm joint names](Media/ARM_Servos.png)
+
+![ESP32 to PCA9685 and servo wiring example](Media/1620035018_918_Tutorial-de-servomotor-para-Arduino-ESP8266-y-ESP32.png)
+
+### Essential electrical connections
+
+| ESP32 / power | PCA9685 | What it does |
+|---|---|---|
+| `GPIO 21` | `SDA` | I2C data |
+| `GPIO 22` | `SCL` | I2C clock |
+| `GND` | `GND` | Common electrical ground |
+| `3V3` | `VCC` | PCA9685 logic power |
+| External regulated `5–6 V` | `V+` | Servo power only |
+| External supply `GND` | PCA9685 power `GND` | Servo power return; must share ground with ESP32 |
+
+Never power the servos from the ESP32 3.3 V pin. Connect each servo's three-wire plug to the correct PCA9685 channel: signal wire to the `S` row, positive wire to `V+`, and ground wire to `GND`.
+
+For the production channel map, connect Base, Shoulder, Elbow, Wrist, Roll, and Gripper to channels `0, 1, 2, 3, 4, 5` for Arm A. In the shared-board dual configuration, connect the same six joints of Arm B to channels `6, 7, 8, 9, 10, 11`.
 
 ## Version History
 
@@ -231,7 +257,7 @@ Robotic_Arm/
 
 ### 1. Hardware Assembly
 
-Assemble the ROT3U arm following manufacturer instructions. Connect servos to PCA9685 channels as shown in the channel assignment table above. Wire PCA9685 I²C to ESP32 (SDA → GPIO 21, SCL → GPIO 22).
+Assemble the ROT3U arm following manufacturer instructions. Use the wiring table in [Media and Wiring Quick Reference](#media-and-wiring-quick-reference), then follow the complete step-by-step instructions in [`Final/README.md`](Final/README.md).
 
 ### 2. Measure Link Lengths
 
