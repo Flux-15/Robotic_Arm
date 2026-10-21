@@ -1,0 +1,252 @@
+═══════════════════════════════════════════════════════════════════════════════
+                    ROBOTIC ARM DEBUG QUICK REFERENCE
+═══════════════════════════════════════════════════════════════════════════════
+
+DECISION TREE
+═════════════
+
+              ┌─ Do motors buzz/twitch on power-up?
+              │  YES → Power supply issue
+              │         • Check GND connection
+              │         • Upgrade supply (5A+)
+              │         • Add 10000µF bulk cap
+              │
+Start Testing │
+              │  NO → Proceed
+              │
+              └─ Run Step 1: Single Servo Test (GPIO18 direct PWM)
+                 
+                 ┌─ Does servo move smoothly?
+                 │  YES → GPIO and servo are OK
+                 │        Run Step 2: PCA9685 test
+                 │
+                 │  NO → Dead servo or GPIO
+                 │       • Swap servo to different pin
+                 │       • Try different servo
+                 │
+                 └─ PCA9685 Test
+
+                    ┌─ Can you move all 16 channels?
+                    │  YES → PCA9685 is good
+                    │        Run Step 3: Full arm test
+                    │
+                    │  NO → Channels [8-15] dead?
+                    │       → I²C address mismatch (0x40 vs 0x41)
+                    │  NO → Random dead channels?
+                    │       → Solder joints on PCA9685 board
+                    │
+                    └─ Full Arm Serial Test
+
+                       ┌─ All 6 joints move in sequence?
+                       │  YES → Hardware is solid
+                       │        Issue is software (IK, mapping, GUI)
+                       │
+                       │  NO → Use Troubleshooting Matrix
+                       │
+                       └─ If still random failures
+                          → BUILD PERFBOARD PCB
+                             (Jumper wires are unreliable)
+
+
+HARDWARE CHECKLIST
+═══════════════════
+
+BEFORE ANY CODE:
+  ☐ Servo power supply: 5-6V, minimum 2A
+  ☐ Separate from USB — don't power servos from ESP32 USB!
+  ☐ Common GND: ESP32 GND ← → Servo GND (must be connected)
+  ☐ Bulk capacitor: 10000µF+ across servo supply rails
+  ☐ I²C pull-ups: 4.7kΩ on SDA and SCL (or PCA9685 has them)
+
+WIRING DIAGRAM (Minimal, no PCB yet)
+═════════════════════════════════════
+
+┌──────────────────────────────────────────────────────────┐
+│                                                          │
+│        ┌──────────────────┐                             │
+│        │   ESP32 DevKit   │                             │
+│        │                  │                             │
+│   GND ─┼────┐             │                             │
+│        │    │             │                             │
+│   3.3V ─┼──┬─┘             │                             │
+│        │  │               │                             │
+│   GPIO21 (SDA)──┐         │                             │
+│   GPIO22 (SCL)──┼──┐      │                             │
+│        │        │  │      │                             │
+│        └────────┼──┼──┐   │                             │
+│               [4.7k] │   │                             │
+│                      │   │                             │
+│        ┌─────────────┼───┼─────────┐                    │
+│        │             │   │         │                    │
+│        │         ┌─────────────┐   │                    │
+│        │         │  PCA9685    │   │                    │
+│        │         │  I²C: 0x40  │   │                    │
+│    GND ├────────→│ GND    SDA ←┤───┴──(from above)     │
+│        │         │ VCC    SCL ←┤─────(from above)      │
+│   5V   ├────────→│ V+ (servo)  │                        │
+│        │         │             │                        │
+│        │         │ OUT0-OUT15  │                        │
+│        │         └──┬──┬──...─┬┘                        │
+│        │            │  │     │                          │
+│        │         (16 servo output pins)                 │
+│        │            │  │     │                          │
+│        │    ┌────────┴──┴──...─┬─────────┐              │
+│        │    │                  │         │              │
+│        │  ┌──────────────────┐ │         │              │
+│        │  │  Servo Power Supply  │       │              │
+│        │  │  5-6V, 2+ Amps    │ │       │              │
+│        │  │                   │ │       │              │
+│        │  │ + (red)    [10000µF] │      │              │
+│        │  │ - (black)  cap    │ │      │              │
+│        │  │ GND────────────────┼─┤      │              │
+│        │  └───────────────────┘ │      │              │
+│        │                        │      │              │
+│        └────────────────────────┴──────┘              │
+│           (All servo grounds tied together)          │
+│                                                      │
+│        ┌──────────────────────────────────────┐     │
+│        │  Servo Connectors (1×2 headers)      │     │
+│        │                                      │     │
+│        │  [0] [1] [2] ... [15]              │     │
+│        │   │   │   │       │                 │     │
+│        │  Sig Sig Sig ... Sig ──→ PCA outputs│    │
+│        │   │   │   │       │                 │     │
+│        │  GND GND GND ... GND ──→ Power GND  │     │
+│        └──────────────────────────────────────┘    │
+│                                                      │
+└──────────────────────────────────────────────────────┘
+
+When everything passes → BUILD PERFBOARD PCB:
+═════════════════════════════════════════════
+
+PCB Layout (10×15 cm perfboard):
+
+┌─────────────────────────────────────────────────┐
+│  Row 1: [════ GND BUS ════] (all 10 holes)      │
+│  Row 2: [════ VCC BUS ════] (all 10 holes)      │
+│  Row 3: (spacing)                               │
+│                                                 │
+│  Row 4-8: [ESP32 DevKit]                        │
+│            GPIO21, GPIO22, GND, VCC exposed     │
+│                                                 │
+│  Row 9: [PCA9685 Breakout]                      │
+│          SDA, SCL, GND, VCC (5V), signal pins  │
+│                                                 │
+│  Row 10: [Servo Power Connector]                │
+│          +5V in, GND in, [10000µF cap]         │
+│                                                 │
+│  Row 11: [Servo Output Headers 1×16]           │
+│          CH0 CH1 CH2 ... CH15 [shared GND]    │
+│                                                 │
+│  Row 12-15: [Filter caps, resistors, space]   │
+│                                                 │
+└─────────────────────────────────────────────────┘
+
+Critical Paths (KEEP SHORT):
+  1. ESP32 GND → PCA9685 GND → Servo GND (thick wire!)
+  2. Servo VCC → [10000µF cap] → PCA9685 V+ (thick wire!)
+  3. GPIO21 → PCA9685 SDA (use yellow wire)
+  4. GPIO22 → PCA9685 SCL (use yellow wire)
+
+
+COMPONENT SPECIFICATIONS
+═════════════════════════
+
+Servo Power Supply:
+  • Voltage: 5-6V DC (NOT 3.3V!)
+  • Current: Minimum 2A per servo (recommend 5A total)
+  • Example: Mean Well RSP-75-5 (75W, 5V, 15A)
+  • Or: Bench supply set to 5.5V, current limit 5A
+
+Bulk Capacitor (servo supply):
+  • Value: 10000µF (10mF) minimum
+  • Voltage: 16V or higher
+  • Type: Electrolytic (polarity matters! + to supply, - to GND)
+  • Placement: As close as possible to servo power input
+
+Bypass Capacitors (PCA9685):
+  • Value: 100µF per device
+  • Voltage: 16V+
+  • Placement: Between VCC and GND on PCA9685
+
+I²C Pull-up Resistors:
+  • Value: 4.7kΩ (4700Ω)
+  • Count: 2 (one on SDA, one on SCL)
+  • Note: If PCA9685 board already has them, don't add more
+
+
+TROUBLESHOOTING QUICK ANSWERS
+═════════════════════════════════
+
+Symptom                          Likely Cause
+───────────────────────────────────────────────────────────────
+Servo buzzes but doesn't move    Power supply voltage too low
+                                 or common GND missing
+
+"PCA9685 not found"              I²C wiring loose
+                                 Wrong address (0x40 vs 0x41)
+                                 SDA/SCL swapped
+
+Some channels move, others don't Channels 8-15: Address issue
+                                 Some channels: Solder joint
+                                 
+All arms move in test, but       Software (IK solver returns NaN)
+gripper never moves              or firmware doesn't send to Ch5
+
+Shoulder/wrist weak or glitchy   Supply voltage sags under load
+                                 Add larger bulk capacitor
+                                 Upgrade power supply
+                                 OR add second supply for logic
+
+Everything works but twitches     Jumper wires loose
+randomly or locks up             Build perfboard PCB
+
+ESP32 resets when servos move    Brown-out from current spike
+                                 Add bulk cap + thicker power wires
+                                 Reduce simultaneous servo motion
+
+
+TEST CODE FILE SIZES (for reference)
+═════════════════════════════════════
+
+single_servo_test.ino ........... ~1.5 KB
+pca9685_test.ino ................ ~2.0 KB
+robotic_arm_serial_test.ino ..... ~4.5 KB
+i2c_scanner.ino (helper) ........ ~0.8 KB
+
+
+COMMON MISTAKES TO AVOID
+═════════════════════════
+
+❌ Powering servos from ESP32 USB
+   ✓ Always use external 5-6V supply
+
+❌ Forgetting common GND
+   ✓ Must have: Servo GND ← → ESP32 GND
+
+❌ No bulk capacitor
+   ✓ Add 10000µF across servo supply input
+
+❌ Noisy I²C (long jumper wires)
+   ✓ Keep SDA/SCL short and twisted
+   ✓ Build PCB for final version
+
+❌ Testing with arm under load
+   ✓ Run tests with arm supported or unloaded
+   ✓ Load makes current spikes worse
+
+❌ Ignoring brownout resets
+   ✓ If ESP32 resets during servo motion
+   ✓ → Upgrade power supply immediately
+
+
+NEXT STEPS SUMMARY
+═══════════════════
+
+1. Run Step 1 test → confirm GPIO18 servo works
+2. Run Step 2 test → confirm PCA9685 works
+3. Run Step 3 test → identify which joints fail
+4. Use Troubleshooting Matrix → diagnose specific issue
+5. If random twitches → BUILD PERFBOARD PCB
+
+═══════════════════════════════════════════════════════════════════════════════
