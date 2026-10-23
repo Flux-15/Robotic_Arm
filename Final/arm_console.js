@@ -26,6 +26,7 @@ function freshArmState() {
     ik: { px: 250, py: 0, pz: 150, psi: -30, t5: 0, elbow: 1 },
     cfg: { L0: 75, A: 14, B: 12, L1: 102, L2: 130, L34: 173 },
     invert: { t1: false, t2: false, t3: false, t4: false, t5: false },
+    grip: 90, // gripper position 0-180
     port: null, reader: null, writer: null, connected: false
   };
 }
@@ -363,9 +364,12 @@ function render() {
     document.getElementById('unreachWarn').style.display = ikRes.reachable ? 'none' : 'block';
   }
 
-  drawSide(joints);
-  drawTop(pose.r, t1);
-  updateLegendColors();
+  if (window.ArmView3D) {
+    ArmView3D.update({
+      joints, t1, t5, grip: st.grip, cfg: c,
+      target: st.mode === 'ik' ? { x: st.ik.px, y: st.ik.py, z: st.ik.pz } : null
+    });
+  }
 
   document.getElementById('readout').innerHTML =
     `<span class="k">theta1</span> <span class="v">${fmt(t1)}</span>°&nbsp;&nbsp;` +
@@ -383,7 +387,8 @@ function render() {
   JOINTS.forEach(j => sent[j.id] = st.invert[j.id] ? -raw[j.id] : raw[j.id]);
 
   const armPrefix = (topology === 'shared') ? (activeArm + ' ') : '';
-  const cmd = `${armPrefix}J ${fmt(sent.t1)} ${fmt(sent.t2)} ${fmt(sent.t3)} ${fmt(sent.t4)} ${fmt(sent.t5)} 90`;
+  const gripValue = Math.round(arms[activeArm].grip);
+  const cmd = `${armPrefix}J ${fmt(sent.t1)} ${fmt(sent.t2)} ${fmt(sent.t3)} ${fmt(sent.t4)} ${fmt(sent.t5)} ${gripValue}`;
   document.getElementById('cmdStr').textContent = cmd;
 
   updateSendAvailability();
@@ -457,6 +462,7 @@ function loadArmIntoUI() {
   document.getElementById('ikControls').style.display = st.mode === 'ik' ? 'block' : 'none';
 
   buildInvertList();
+  loadGripperIntoUI();
   render();
 }
 
@@ -473,6 +479,55 @@ document.getElementById('sendBtn').addEventListener('click', () => {
   sendToArm(activeArm, document.getElementById('cmdStr').textContent, false);
 });
 document.getElementById('liveSend').addEventListener('change', render);
+
+// -----------------------------------------------------------------
+// Gripper Control
+// -----------------------------------------------------------------
+document.getElementById('gripSlider').addEventListener('input', (e) => {
+  const val = +e.target.value;
+  arms[activeArm].grip = val;
+  updateGripperUI();
+  render(); // Update command string
+});
+
+document.getElementById('gripCloseBtn').addEventListener('click', () => {
+  arms[activeArm].grip = 0;
+  updateGripperUI();
+  render();
+  sendToArm(activeArm, `${(topology === 'shared') ? (activeArm + ' ') : ''}G 0`, false);
+});
+
+document.getElementById('gripOpenBtn').addEventListener('click', () => {
+  arms[activeArm].grip = 180;
+  updateGripperUI();
+  render();
+  sendToArm(activeArm, `${(topology === 'shared') ? (activeArm + ' ') : ''}G 180`, false);
+});
+
+function updateGripperUI() {
+  const grip = arms[activeArm].grip;
+  document.getElementById('gripSlider').value = grip;
+  document.getElementById('gripValue').textContent = Math.round(grip) + '°';
+  updateSliderFill(document.getElementById('gripSlider'));
+  
+  // Update status indicator
+  const indicator = document.getElementById('gripIndicator');
+  const status = document.getElementById('gripStatus');
+  if (grip < 30) {
+    indicator.style.background = 'var(--data)';
+    status.textContent = 'closed';
+  } else if (grip > 150) {
+    indicator.style.background = 'var(--success)';
+    status.textContent = 'open';
+  } else {
+    indicator.style.background = 'var(--warning)';
+    status.textContent = 'mid-position';
+  }
+}
+
+function loadGripperIntoUI() {
+  updateGripperUI();
+}
 
 // -----------------------------------------------------------------
 // Arm Tabs
