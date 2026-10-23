@@ -676,6 +676,79 @@ select:focus {
   background: var(--danger-subtle);
 }
 
+/* --- Gripper Controls ---------------------------------------- */
+.gripper-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.gripper-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-gripper {
+  flex: 1;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1.5px solid;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-close {
+  background: transparent;
+  border-color: var(--data);
+  color: var(--data);
+}
+
+.btn-close:hover {
+  background: var(--data-subtle);
+  transform: translateY(-1px);
+}
+
+.btn-close:active {
+  transform: translateY(0);
+}
+
+.btn-open {
+  background: transparent;
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.btn-open:hover {
+  background: var(--success-subtle);
+  transform: translateY(-1px);
+}
+
+.btn-open:active {
+  transform: translateY(0);
+}
+
+.gripper-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.gripper-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  display: inline-block;
+}
+
 /* --- Readout ------------------------------------------------ */
 .readout {
   background: var(--bg-elevated);
