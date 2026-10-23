@@ -136,6 +136,25 @@
             </div>
 
             <div class="card">
+              <div class="card__header">Gripper Control</div>
+              <div class="gripper-controls">
+                <div class="control-row">
+                  <label class="control-row__label">Grip Position</label>
+                  <input type="range" id="gripSlider" min="0" max="180" step="1" value="90">
+                  <span class="control-row__value" id="gripValue">90°</span>
+                </div>
+                <div class="gripper-buttons">
+                  <button class="btn btn-gripper btn-close" id="gripCloseBtn">🤚 Close</button>
+                  <button class="btn btn-gripper btn-open" id="gripOpenBtn">👋 Open</button>
+                </div>
+                <div class="gripper-status">
+                  <span class="gripper-indicator" id="gripIndicator"></span>
+                  <span id="gripStatus">closed</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
               <div class="card__header">Solved Joint Angles</div>
               <div class="readout" id="readout">—</div>
               <div class="cmd-box">
